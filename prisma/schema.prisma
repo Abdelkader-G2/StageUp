@@ -1,0 +1,144 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  name          String
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+
+  intern     Intern?
+  enterprise Enterprise?
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Enterprise {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  imageUrl    String
+  description String
+  companyName String
+  industry    String
+  companySize String
+  foundedDate DateTime
+  websiteUrl  String?
+
+  internships Internship[]
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Intern {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  overview     String?  @db.Text
+  university   String
+  fieldOfStudy String
+  resumeUrl    String
+  portfolioUrl String?
+  degrees      Degree[]
+
+  feedbacks   Feedback[]
+  internships Internship[]
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Degree {
+  id       String @id @default(cuid())
+  internId String
+
+  degreeName   String
+  institution  String
+  dateObtained DateTime
+
+  intern Intern @relation(fields: [internId], references: [id], onDelete: Cascade)
+}
+
+model Internship {
+  id           String  @id @default(cuid())
+  internId     String?
+  enterpriseId String?
+
+  positionTitle        String
+  description          String
+  location             String
+  duration             String
+  documentationFileUrl String?
+
+  questions Question[]
+  keywords  String
+
+  feedbacks Feedback[]
+
+  createdAt DateTime @default(now())
+
+  intern     Intern?     @relation(fields: [internId], references: [id], onDelete: Cascade)
+  enterprise Enterprise? @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+}
+
+model Question {
+  id           String @id @default(cuid())
+  internshipId String
+
+  question String
+  required Boolean @default(false)
+
+  internship Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id           String @id @default(cuid())
+  internId     String
+  internshipId String
+
+  comment String
+  rating  Int    @default(0)
+
+  intern     Intern     @relation(fields: [internId], references: [id], onDelete: Cascade)
+  internship Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+}
